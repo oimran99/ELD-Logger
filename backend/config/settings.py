@@ -178,7 +178,11 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # Security hardening applied only when DEBUG is off (i.e. in production).
 if not DEBUG:
     SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
-    SECURE_SSL_REDIRECT = os.environ.get("SECURE_SSL_REDIRECT", "True").lower() == "true"
+    # PaaS hosts (HF Spaces, Back4App, Render, …) terminate TLS at their edge and
+    # forward plain HTTP to the container, so Django's own HTTPS redirect causes a
+    # loop. The edge already enforces HTTPS, so this defaults OFF; set the env var
+    # to "True" only if the app is exposed directly without an HTTPS proxy.
+    SECURE_SSL_REDIRECT = os.environ.get("SECURE_SSL_REDIRECT", "False").lower() == "true"
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
     SECURE_HSTS_SECONDS = 60 * 60 * 24 * 30

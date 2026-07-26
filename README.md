@@ -90,35 +90,42 @@ npm run dev            # http://localhost:5173 (proxies /api → :8000)
 **Database → Neon.** Sign up at [neon.tech](https://neon.tech) (no card), create a
 project, and copy the Postgres connection string.
 
-**Backend → Back4App Containers** (Docker, no card). At
-[containers.back4app.com](https://containers.back4app.com) → *New App* → connect
-GitHub → select this repo → set **Root Directory** to `backend` (it builds
-`backend/Dockerfile`). Set these environment variables:
+**Backend → Hugging Face Spaces** (Docker, no card, permanent URL). Create a new
+**Docker** Space, then push the `backend/` subtree to it (see below). The Space's
+`README.md` metadata (`sdk: docker`, `app_port: 8000`) and `Dockerfile` are already
+in `backend/`. In the Space's **Settings → Variables and secrets**, set:
 
 - `DJANGO_DEBUG` = `False`
 - `DJANGO_SECRET_KEY` = a long random string (`python -c "import secrets; print(secrets.token_urlsafe(64))"`)
-- `DJANGO_ALLOWED_HOSTS` = `.b4a.run`
+- `DJANGO_ALLOWED_HOSTS` = `.hf.space`
 - `DATABASE_URL` = your Neon connection string
-- `CORS_ALLOWED_ORIGINS` and `CSRF_TRUSTED_ORIGINS` = your Vercel URL (set after step below)
+- `CORS_ALLOWED_ORIGINS` and `CSRF_TRUSTED_ORIGINS` = your Vercel URL (set after the frontend step)
 - `ORS_API_KEY` = optional (the keyless OSRM/Nominatim fallback works without it)
 
-The container runs `migrate` then gunicorn (1 worker + threads, tuned for the
-256 MB free instance) on `$PORT`. The same `Dockerfile` deploys unchanged to
-**Hugging Face Spaces** or **Fly.io** if you outgrow the free RAM.
+Push the backend to the Space (the `backend/` folder becomes the Space root):
+
+```bash
+git remote add hf https://huggingface.co/spaces/<user>/<space-name>
+git push hf "$(git subtree split --prefix backend HEAD)":refs/heads/main --force
+```
+
+A free Space sleeps after ~48 h of no traffic and cold-starts (~30 s) on the next
+request; a free uptime pinger (UptimeRobot / cron-job.org) hitting `/api/health/`
+every few minutes keeps it awake. The same `Dockerfile` also deploys to Back4App,
+Fly.io, or any Docker host.
 
 **Frontend → Vercel** (no card). *New Project* → import this repo, set **Root
 Directory** to `frontend` (auto-detects Vite via `vercel.json`). Add one env var:
 
-- `VITE_API_BASE` = `https://<your-app>.b4a.run/api`
+- `VITE_API_BASE` = `https://<user>-<space-name>.hf.space/api`
 
 Finally, set the backend's `CORS_ALLOWED_ORIGINS` / `CSRF_TRUSTED_ORIGINS` to the
-Vercel URL and redeploy. The backend uses Postgres in production (SQLite locally),
-serves its own static files via WhiteNoise, and enables HTTPS/HSTS/secure-cookie
-hardening when `DJANGO_DEBUG=False`. Back4App's free instance sleeps when idle, so
-the first request after a lull has a cold-start delay.
+Vercel URL. The backend uses Postgres in production (SQLite locally), serves its
+own static files via WhiteNoise, and enables HSTS/secure-cookie hardening when
+`DJANGO_DEBUG=False`.
 
-> A `render.yaml` blueprint is also included for [Render](https://render.com), but
-> note Render now requires a card on file even for its free tier.
+> A `render.yaml` blueprint (Render) is also included, but note Render and most
+> other PaaS now require a card on file even for their free tiers.
 
 ## API
 
