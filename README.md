@@ -85,29 +85,40 @@ npm install
 npm run dev            # http://localhost:5173 (proxies /api → :8000)
 ```
 
-## Deployment (Render + Vercel, free tier)
+## Deployment (free tier, no credit card)
 
-**Backend → Render** (Blueprint). In the Render dashboard: *New → Blueprint* and
-connect this repo. `render.yaml` provisions the Django web service (build via
-`backend/build.sh`, run via gunicorn) plus a free Postgres database, and wires
-`DATABASE_URL` and an auto-generated `DJANGO_SECRET_KEY`. After the first deploy,
-set these env vars on the service:
+**Database → Neon.** Sign up at [neon.tech](https://neon.tech) (no card), create a
+project, and copy the Postgres connection string.
 
-- `CORS_ALLOWED_ORIGINS` and `CSRF_TRUSTED_ORIGINS` → your Vercel URL
-  (e.g. `https://eld-logger.vercel.app`)
-- `ORS_API_KEY` → optional (the keyless OSRM/Nominatim fallback works without it)
+**Backend → Back4App Containers** (Docker, no card). At
+[containers.back4app.com](https://containers.back4app.com) → *New App* → connect
+GitHub → select this repo → set **Root Directory** to `backend` (it builds
+`backend/Dockerfile`). Set these environment variables:
 
-**Frontend → Vercel.** *New Project* → import this repo, set **Root Directory**
-to `frontend`. Vercel auto-detects Vite. Add one env var:
+- `DJANGO_DEBUG` = `False`
+- `DJANGO_SECRET_KEY` = a long random string (`python -c "import secrets; print(secrets.token_urlsafe(64))"`)
+- `DJANGO_ALLOWED_HOSTS` = `.b4a.run`
+- `DATABASE_URL` = your Neon connection string
+- `CORS_ALLOWED_ORIGINS` and `CSRF_TRUSTED_ORIGINS` = your Vercel URL (set after step below)
+- `ORS_API_KEY` = optional (the keyless OSRM/Nominatim fallback works without it)
 
-- `VITE_API_BASE` → `https://<your-render-service>.onrender.com/api`
+The container runs `migrate` then gunicorn (1 worker + threads, tuned for the
+256 MB free instance) on `$PORT`. The same `Dockerfile` deploys unchanged to
+**Hugging Face Spaces** or **Fly.io** if you outgrow the free RAM.
 
-Notes: the backend uses Postgres in production (SQLite locally), serves its own
-static files via WhiteNoise, and enables HTTPS/HSTS/secure-cookie hardening when
-`DJANGO_DEBUG=False`. Render's free web service sleeps after ~15 min idle, so the
-first request after a lull has a cold-start delay. Render's free Postgres expires
-after 90 days — swap `DATABASE_URL` to a free [Neon](https://neon.tech) database
-for a durable option.
+**Frontend → Vercel** (no card). *New Project* → import this repo, set **Root
+Directory** to `frontend` (auto-detects Vite via `vercel.json`). Add one env var:
+
+- `VITE_API_BASE` = `https://<your-app>.b4a.run/api`
+
+Finally, set the backend's `CORS_ALLOWED_ORIGINS` / `CSRF_TRUSTED_ORIGINS` to the
+Vercel URL and redeploy. The backend uses Postgres in production (SQLite locally),
+serves its own static files via WhiteNoise, and enables HTTPS/HSTS/secure-cookie
+hardening when `DJANGO_DEBUG=False`. Back4App's free instance sleeps when idle, so
+the first request after a lull has a cold-start delay.
+
+> A `render.yaml` blueprint is also included for [Render](https://render.com), but
+> note Render now requires a card on file even for its free tier.
 
 ## API
 
