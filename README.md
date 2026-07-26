@@ -85,6 +85,30 @@ npm install
 npm run dev            # http://localhost:5173 (proxies /api → :8000)
 ```
 
+## Deployment (Render + Vercel, free tier)
+
+**Backend → Render** (Blueprint). In the Render dashboard: *New → Blueprint* and
+connect this repo. `render.yaml` provisions the Django web service (build via
+`backend/build.sh`, run via gunicorn) plus a free Postgres database, and wires
+`DATABASE_URL` and an auto-generated `DJANGO_SECRET_KEY`. After the first deploy,
+set these env vars on the service:
+
+- `CORS_ALLOWED_ORIGINS` and `CSRF_TRUSTED_ORIGINS` → your Vercel URL
+  (e.g. `https://eld-logger.vercel.app`)
+- `ORS_API_KEY` → optional (the keyless OSRM/Nominatim fallback works without it)
+
+**Frontend → Vercel.** *New Project* → import this repo, set **Root Directory**
+to `frontend`. Vercel auto-detects Vite. Add one env var:
+
+- `VITE_API_BASE` → `https://<your-render-service>.onrender.com/api`
+
+Notes: the backend uses Postgres in production (SQLite locally), serves its own
+static files via WhiteNoise, and enables HTTPS/HSTS/secure-cookie hardening when
+`DJANGO_DEBUG=False`. Render's free web service sleeps after ~15 min idle, so the
+first request after a lull has a cold-start delay. Render's free Postgres expires
+after 90 days — swap `DATABASE_URL` to a free [Neon](https://neon.tech) database
+for a durable option.
+
 ## API
 
 `POST /api/plan-trip/`

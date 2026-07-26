@@ -4,6 +4,7 @@ __pycache__/
 *.py[cod]
 *.sqlite3
 backend/.env
+backend/staticfiles/
 .env
 
 # Node / React

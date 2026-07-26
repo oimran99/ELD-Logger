@@ -1,0 +1,36 @@
+# Render Blueprint — deploys the Django API + a free Postgres database.
+# In the Render dashboard: New → Blueprint → connect this repo. After the first
+# deploy, set CORS_ALLOWED_ORIGINS (and CSRF_TRUSTED_ORIGINS) to your Vercel URL
+# and, optionally, ORS_API_KEY.
+services:
+  - type: web
+    name: eld-logger-api
+    runtime: python
+    rootDir: backend
+    plan: free
+    buildCommand: "./build.sh"
+    startCommand: "gunicorn config.wsgi:application"
+    healthCheckPath: /api/health/
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.12.7"
+      - key: DJANGO_DEBUG
+        value: "False"
+      - key: DJANGO_SECRET_KEY
+        generateValue: true          # Render generates a strong secret
+      - key: DJANGO_ALLOWED_HOSTS
+        value: ".onrender.com"
+      - key: DATABASE_URL
+        fromDatabase:
+          name: eld-logger-db
+          property: connectionString
+      - key: CORS_ALLOWED_ORIGINS
+        sync: false                   # set to your Vercel URL, e.g. https://eld-logger.vercel.app
+      - key: CSRF_TRUSTED_ORIGINS
+        sync: false                   # same Vercel URL
+      - key: ORS_API_KEY
+        sync: false                   # optional; keyless fallback works without it
+
+databases:
+  - name: eld-logger-db
+    plan: free
