@@ -1,0 +1,22 @@
+# Python / Django
+backend/venv/
+__pycache__/
+*.py[cod]
+*.sqlite3
+backend/.env
+.env
+
+# Node / React
+node_modules/
+frontend/dist/
+frontend/.vite/
+
+# Claude Code local settings (machine-specific)
+.claude/settings.local.json
+
+# Editor / OS
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.log
